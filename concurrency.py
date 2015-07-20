@@ -1,8 +1,10 @@
 from greenlet import greenlet
 
+
 class _GreenletIterator(object):
     """Iterator that switches to a target greenlet to get the next value."""
     _REQUEST_NEXT = object
+
     def __init__(self, target_greenlet):
         super().__init__()
         self.target_greenlet = target_greenlet
@@ -41,3 +43,14 @@ class SendGenerator(object):
         while result is not _GreenletIterator._REQUEST_NEXT:
             yield result
             result = self.iterator_greenlet.switch()
+
+
+def transform_and_recombine(iterator, *transforming_generators):
+    """Send iterator values into each of the transforming generators and
+    combine the results in the order that they were generated."""
+    send_generators = [SendGenerator(generator)
+                       for generator in transforming_generators]
+
+    for value in iterator:
+        for send_generator in send_generators:
+            yield from send_generator.send(value)
